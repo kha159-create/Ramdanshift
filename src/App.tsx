@@ -16,7 +16,6 @@ import {
   Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import html2pdf from 'html2pdf.js';
 
 // --- Types ---
 
@@ -248,7 +247,11 @@ const EmployeeSchedule = ({ branch, quickShifts, onEdit, onAdd }: { branch: Bran
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {branch.employees.map((emp, idx) => {
+            {[...branch.employees].sort((a, b) => {
+              const startA = a.shifts[0] ? parseTimeToHour(a.shifts[0].start) : 24;
+              const startB = b.shifts[0] ? parseTimeToHour(b.shifts[0].start) : 24;
+              return startA - startB;
+            }).map((emp, idx) => {
               const totalHours = emp.shifts.reduce((acc, shift) => {
                 const start = parseTimeToHour(shift.start);
                 let end = parseTimeToHour(shift.end);
@@ -291,7 +294,10 @@ const EmployeeSchedule = ({ branch, quickShifts, onEdit, onAdd }: { branch: Bran
                   </td>
                   <td className="px-4 py-3 border-b border-gray-100 text-center print:hidden">
                     <button
-                      onClick={() => onEdit(emp, idx)}
+                      onClick={() => {
+                        const originalIdx = branch.employees.findIndex(e => e === emp);
+                        onEdit(emp, originalIdx);
+                      }}
                       className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
                     >
                       <Edit2 size={14} />
@@ -571,79 +577,8 @@ export default function App() {
     branches.find(b => b.id === selectedBranchId) || branches[0]
     , [selectedBranchId, branches]);
 
-  const handleExportPDF = async () => {
-    const element = document.getElementById('export-container');
-    if (!element || isExporting) return;
-
-    try {
-      setIsExporting(true);
-      window.scrollTo(0, 0);
-
-      // Let the UI settle before capturing
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      const opt = {
-        margin: 10,
-        filename: `جدول_دوام_${selectedBranch.name}_${selectedDate}.pdf`,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          // Force Arabic font rendering compatibility & remove unsupported oklch colors
-          onclone: (clonedDoc: Document) => {
-            const el = clonedDoc.getElementById('export-container');
-            if (el) {
-              el.style.fontFamily = '"Noto Sans Arabic", sans-serif';
-              el.style.direction = 'rtl';
-
-              const allElements = el.querySelectorAll('*');
-              allElements.forEach((node) => {
-                const htmlNode = node as HTMLElement;
-                const style = window.getComputedStyle(htmlNode);
-
-                if (style.backgroundColor.includes('okl') || style.backgroundColor.includes('color-mix')) {
-                  const inlineBg = htmlNode.style.backgroundColor;
-                  if (inlineBg && !inlineBg.includes('okl')) {
-                    htmlNode.style.backgroundColor = inlineBg;
-                  } else if (htmlNode.classList.contains('bg-[#333333]')) {
-                    htmlNode.style.backgroundColor = '#333333';
-                  } else if (htmlNode.classList.contains('bg-indigo-50') || htmlNode.classList.contains('bg-indigo-600')) {
-                    htmlNode.style.backgroundColor = '#eef2ff'; // fallback light indigo
-                  } else {
-                    htmlNode.style.backgroundColor = '#ffffff';
-                  }
-                }
-
-                if (style.color.includes('okl') || style.color.includes('color-mix')) {
-                  if (htmlNode.classList.contains('text-white') || htmlNode.tagName === 'TH') {
-                    htmlNode.style.color = '#ffffff';
-                  } else if (htmlNode.classList.contains('text-indigo-600')) {
-                    htmlNode.style.color = '#4f46e5';
-                  } else {
-                    htmlNode.style.color = '#000000';
-                  }
-                }
-
-                // Remove shadows which also use complex colors often
-                htmlNode.style.boxShadow = 'none';
-                htmlNode.style.textShadow = 'none';
-                htmlNode.style.borderColor = '#e5e7eb'; // fallback gray border
-              });
-            }
-          }
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-
-      await html2pdf().set(opt).from(element).save();
-
-    } catch (error) {
-      console.error('PDF Export Error:', error);
-      alert('حدث خطأ أثناء تصدير الملف: ' + (error as Error).message);
-    } finally {
-      setIsExporting(false);
-    }
+  const handleExportPDF = () => {
+    window.print();
   };
 
   const handleSaveEmployee = (updated: Employee) => {
@@ -986,11 +921,10 @@ export default function App() {
             </button>
             <button
               onClick={handleExportPDF}
-              disabled={isExporting}
-              className="flex-1 sm:flex-none px-3 py-2 bg-[#333333] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 shadow-md hover:bg-black transition-all"
+              className="flex-1 sm:flex-none px-3 py-2 bg-[#333333] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all print:hidden"
             >
               <Download size={14} />
-              <span>{isExporting ? 'جاري...' : 'تصدير PDF'}</span>
+              <span>تصدير PDF</span>
             </button>
           </div>
         </div>

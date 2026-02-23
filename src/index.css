@@ -79,3 +79,20 @@ body {
 [dir="rtl"] {
   font-family: "Noto Sans Arabic", "Inter", sans-serif;
 }
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+}
