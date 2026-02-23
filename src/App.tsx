@@ -590,12 +590,46 @@ export default function App() {
           scale: 2,
           useCORS: true,
           letterRendering: true,
-          // Force Arabic font rendering compatibility
+          // Force Arabic font rendering compatibility & remove unsupported oklch colors
           onclone: (clonedDoc: Document) => {
             const el = clonedDoc.getElementById('export-container');
             if (el) {
               el.style.fontFamily = '"Noto Sans Arabic", sans-serif';
               el.style.direction = 'rtl';
+
+              const allElements = el.querySelectorAll('*');
+              allElements.forEach((node) => {
+                const htmlNode = node as HTMLElement;
+                const style = window.getComputedStyle(htmlNode);
+
+                if (style.backgroundColor.includes('okl') || style.backgroundColor.includes('color-mix')) {
+                  const inlineBg = htmlNode.style.backgroundColor;
+                  if (inlineBg && !inlineBg.includes('okl')) {
+                    htmlNode.style.backgroundColor = inlineBg;
+                  } else if (htmlNode.classList.contains('bg-[#333333]')) {
+                    htmlNode.style.backgroundColor = '#333333';
+                  } else if (htmlNode.classList.contains('bg-indigo-50') || htmlNode.classList.contains('bg-indigo-600')) {
+                    htmlNode.style.backgroundColor = '#eef2ff'; // fallback light indigo
+                  } else {
+                    htmlNode.style.backgroundColor = '#ffffff';
+                  }
+                }
+
+                if (style.color.includes('okl') || style.color.includes('color-mix')) {
+                  if (htmlNode.classList.contains('text-white') || htmlNode.tagName === 'TH') {
+                    htmlNode.style.color = '#ffffff';
+                  } else if (htmlNode.classList.contains('text-indigo-600')) {
+                    htmlNode.style.color = '#4f46e5';
+                  } else {
+                    htmlNode.style.color = '#000000';
+                  }
+                }
+
+                // Remove shadows which also use complex colors often
+                htmlNode.style.boxShadow = 'none';
+                htmlNode.style.textShadow = 'none';
+                htmlNode.style.borderColor = '#e5e7eb'; // fallback gray border
+              });
             }
           }
         },
