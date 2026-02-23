@@ -848,7 +848,7 @@ export default function App() {
         />
       )}
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 print:hidden">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-8 h-8 bg-[#333333] rounded flex items-center justify-center text-white shrink-0">
@@ -894,7 +894,7 @@ export default function App() {
 
       <main className="max-w-[1200px] mx-auto p-4 sm:p-6 space-y-6">
 
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between" dir="rtl">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between print:hidden" dir="rtl">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {branches.map(branch => (
               <button
@@ -958,7 +958,9 @@ export default function App() {
             </div>
           </div>
 
-          <ShiftSummary branch={selectedBranch} quickShifts={quickShifts} />
+          <div className="print:hidden">
+            <ShiftSummary branch={selectedBranch} quickShifts={quickShifts} />
+          </div>
 
           <EmployeeSchedule
             branch={selectedBranch}
@@ -970,7 +972,7 @@ export default function App() {
       </main>
 
       {/* Footer Info */}
-      <footer className="max-w-[1600px] mx-auto p-6 text-center text-gray-400 text-xs border-t border-gray-100 mt-12">
+      <footer className="max-w-[1600px] mx-auto p-6 text-center text-gray-400 text-xs border-t border-gray-100 mt-12 print:hidden">
         <p>© ٢٠٢٦ نظام إدارة الشفتات الموحد - جميع الحقوق محفوظة</p>
         <p className="mt-1">تم التحديث التلقائي بناءً على بيانات فروع المنطقة (ينبع، تبوك، عرعر، الجوف، المدينة المنورة)</p>
       </footer>
