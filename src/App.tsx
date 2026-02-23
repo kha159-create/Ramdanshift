@@ -16,8 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js';
 
 // --- Types ---
 
@@ -231,7 +230,7 @@ const getShiftColor = (shift: Shift, branch: Branch, quickShifts: QuickShiftTemp
   return '#D9D9D9'; // Gray default
 };
 
-const EmployeeSchedule = ({ branch, quickShifts, onEdit }: { branch: Branch, quickShifts: QuickShiftTemplate[], onEdit: (emp: Employee, idx: number) => void }) => {
+const EmployeeSchedule = ({ branch, quickShifts, onEdit, onAdd }: { branch: Branch, quickShifts: QuickShiftTemplate[], onEdit: (emp: Employee, idx: number) => void, onAdd: () => void }) => {
   const tableRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -304,6 +303,15 @@ const EmployeeSchedule = ({ branch, quickShifts, onEdit }: { branch: Branch, qui
           </tbody>
         </table>
       </div>
+      <div className="p-3 bg-gray-50 border-t border-gray-100 flex justify-center print:hidden">
+        <button
+          onClick={onAdd}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm"
+        >
+          <Plus size={16} />
+          إضافة موظف جديد
+        </button>
+      </div>
     </div>
   );
 };
@@ -367,10 +375,11 @@ interface EditModalProps {
   employee: Employee;
   quickShifts: QuickShiftTemplate[];
   onSave: (updated: Employee) => void;
+  onDelete?: () => void;
   onClose: () => void;
 }
 
-const EditModal = ({ employee, quickShifts, onSave, onClose }: EditModalProps) => {
+const EditModal = ({ employee, quickShifts, onSave, onDelete, onClose }: EditModalProps) => {
   const [edited, setEdited] = useState<Employee>({ ...employee });
 
   const addShift = () => {
@@ -486,16 +495,30 @@ const EditModal = ({ employee, quickShifts, onSave, onClose }: EditModalProps) =
             ))}
           </div>
         </div>
-        <div className="p-6 bg-gray-50 flex gap-3">
+        <div className="p-6 bg-gray-50 flex gap-2 sm:gap-3 flex-wrap">
           <button
             onClick={() => onSave(edited)}
-            className="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all"
+            className="flex-1 min-w-[120px] bg-indigo-600 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all"
           >
-            <Save size={18} /> حفظ التغييرات
+            <Save size={18} /> حفظ
           </button>
+
+          {onDelete && (
+            <button
+              onClick={() => {
+                if (window.confirm('هل أنت متأكد من حذف هذا الموظف؟')) {
+                  onDelete();
+                }
+              }}
+              className="flex-1 min-w-[120px] bg-red-50 text-red-600 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all"
+            >
+              <Trash2 size={18} /> حذف
+            </button>
+          )}
+
           <button
             onClick={onClose}
-            className="flex-1 bg-white border border-gray-200 text-gray-600 py-3 rounded-2xl font-bold hover:bg-gray-50 transition-all"
+            className="flex-1 min-w-[120px] bg-white border border-gray-200 text-gray-600 py-3 rounded-2xl font-bold hover:bg-gray-50 transition-all"
           >
             إلغاء
           </button>
@@ -555,66 +578,35 @@ export default function App() {
     try {
       setIsExporting(true);
       window.scrollTo(0, 0);
-      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc) => {
-          const el = clonedDoc.getElementById('export-container');
-          if (el) {
-            // Force LTR for the capture to avoid RTL scrambling in html2canvas
-            // but we need to keep the visual order.
-            el.style.direction = 'rtl';
-            el.style.padding = '40px';
-            el.style.width = '1200px';
+      // Let the UI settle before capturing
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-            const allElements = el.querySelectorAll('*');
-            allElements.forEach((node) => {
-              const htmlNode = node as HTMLElement;
-              const style = window.getComputedStyle(htmlNode);
-
-              // Ensure fonts are loaded
-              htmlNode.style.fontFamily = '"Noto Sans Arabic", sans-serif';
-
-              if (style.backgroundColor.includes('okl') || style.backgroundColor.includes('color-mix')) {
-                const inlineBg = htmlNode.style.backgroundColor;
-                if (inlineBg) {
-                  htmlNode.style.backgroundColor = inlineBg;
-                } else if (htmlNode.classList.contains('bg-[#333333]')) {
-                  htmlNode.style.backgroundColor = '#333333';
-                } else {
-                  htmlNode.style.backgroundColor = '#ffffff';
-                }
-              }
-              if (style.color.includes('okl') || style.color.includes('color-mix')) {
-                htmlNode.style.color = htmlNode.tagName === 'TH' ? '#ffffff' : '#000000';
-              }
-              htmlNode.style.boxShadow = 'none';
-              htmlNode.style.textShadow = 'none';
-            });
+      const opt = {
+        margin: 10,
+        filename: `جدول_دوام_${selectedBranch.name}_${selectedDate}.pdf`,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          // Force Arabic font rendering compatibility
+          onclone: (clonedDoc: Document) => {
+            const el = clonedDoc.getElementById('export-container');
+            if (el) {
+              el.style.fontFamily = '"Noto Sans Arabic", sans-serif';
+              el.style.direction = 'rtl';
+            }
           }
-        }
-      });
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      await html2pdf().set(opt).from(element).save();
 
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min((pdfWidth - 10) / imgWidth, (pdfHeight - 10) / imgHeight);
-      const finalWidth = imgWidth * ratio;
-      const finalHeight = imgHeight * ratio;
-
-      pdf.addImage(imgData, 'PNG', (pdfWidth - finalWidth) / 2, 5, finalWidth, finalHeight);
-      pdf.save(`جدول_دوام_${selectedBranch.name}_${selectedDate}.pdf`);
     } catch (error) {
       console.error('PDF Export Error:', error);
-      alert('حدث خطأ أثناء تصدير الملف.');
+      alert('حدث خطأ أثناء تصدير الملف: ' + (error as Error).message);
     } finally {
       setIsExporting(false);
     }
@@ -631,6 +623,40 @@ export default function App() {
     });
     setBranches(updatedBranches);
     setEditingEmployee(null);
+  };
+
+  const handleDeleteEmployee = () => {
+    if (editingEmployee === null) return;
+
+    const updatedBranches = branches.map(b => {
+      if (b.id === selectedBranchId) {
+        const newEmployees = b.employees.filter((_, i) => i !== editingEmployee.idx);
+        return { ...b, employees: newEmployees };
+      }
+      return b;
+    });
+    setBranches(updatedBranches);
+    setEditingEmployee(null);
+  };
+
+  const handleAddEmployee = () => {
+    const newEmployee: Employee = {
+      name: 'موظف جديد',
+      shifts: [{ start: '11:30 am', end: '5:30 pm' }]
+    };
+
+    const updatedBranches = branches.map(b => {
+      if (b.id === selectedBranchId) {
+        return { ...b, employees: [...b.employees, newEmployee] };
+      }
+      return b;
+    });
+
+    setBranches(updatedBranches);
+    const branchIndex = updatedBranches.findIndex(b => b.id === selectedBranchId);
+    if (branchIndex !== -1) {
+      setEditingEmployee({ emp: newEmployee, idx: updatedBranches[branchIndex].employees.length - 1 });
+    }
   };
 
   const handleSaveOpeningShifts = () => {
@@ -848,6 +874,7 @@ export default function App() {
           employee={editingEmployee.emp}
           quickShifts={quickShifts}
           onSave={handleSaveEmployee}
+          onDelete={handleDeleteEmployee}
           onClose={() => setEditingEmployee(null)}
         />
       )}
@@ -969,6 +996,7 @@ export default function App() {
             branch={selectedBranch}
             quickShifts={quickShifts}
             onEdit={(emp, idx) => setEditingEmployee({ emp, idx })}
+            onAdd={handleAddEmployee}
           />
         </div>
       </main>
