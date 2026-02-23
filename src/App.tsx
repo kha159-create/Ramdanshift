@@ -16,6 +16,8 @@ import {
   Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 
 // --- Types ---
 
@@ -590,8 +592,59 @@ export default function App() {
     branches.find(b => b.id === selectedBranchId) || branches[0]
     , [selectedBranchId, branches]);
 
-  const handleExportPDF = () => {
-    window.print();
+  const handleExportPDF = async () => {
+    const element = document.getElementById('export-container');
+    if (!element || isExporting) return;
+
+    try {
+      setIsExporting(true);
+      window.scrollTo(0, 0);
+
+      // Let the UI settle
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Temporarily hide elements with .print:hidden for the image capture
+      const hiddenElements = element.querySelectorAll('.print\\:hidden');
+      hiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
+
+      const dataUrl = await toPng(element, {
+        quality: 1,
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        style: {
+          direction: 'rtl',
+          fontFamily: '"Noto Sans Arabic", sans-serif'
+        }
+      });
+
+      // Restore elements
+      hiddenElements.forEach(el => (el as HTMLElement).style.display = '');
+
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const margin = 10;
+      const maxWidth = pdfWidth - margin * 2;
+      const maxHeight = pdfHeight - margin * 2;
+
+      const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height);
+      const finalWidth = imgProps.width * ratio;
+      const finalHeight = imgProps.height * ratio;
+
+      const x = (pdfWidth - finalWidth) / 2;
+      const y = margin;
+
+      pdf.addImage(dataUrl, 'PNG', x, y, finalWidth, finalHeight);
+      pdf.save(`جدول_دوام_${selectedBranch.name}_${selectedDate}.pdf`);
+
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      alert('حدث خطأ أثناء تصدير الملف: ' + (error as Error).message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSaveEmployee = (updated: Employee) => {
@@ -934,10 +987,11 @@ export default function App() {
             </button>
             <button
               onClick={handleExportPDF}
-              className="flex-1 sm:flex-none px-3 py-2 bg-[#333333] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all print:hidden"
+              disabled={isExporting}
+              className="flex-1 sm:flex-none px-3 py-2 bg-[#333333] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all print:hidden disabled:opacity-50"
             >
               <Download size={14} />
-              <span>تصدير PDF</span>
+              <span>{isExporting ? 'جاري التصدير...' : 'تصدير PDF'}</span>
             </button>
           </div>
         </div>
