@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Clock,
   Calendar,
@@ -505,12 +505,36 @@ const EditModal = ({ employee, quickShifts, onSave, onClose }: EditModalProps) =
   );
 };
 
+// --- Custom Hooks ---
+
+function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.warn(`Error reading localStorage key "${key}":`, error);
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (error) {
+      console.warn(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, storedValue]);
+
+  return [storedValue, setStoredValue] as const;
+}
+
 // --- Main App ---
 
 export default function App() {
-  const [branches, setBranches] = useState<Branch[]>(INITIAL_BRANCHES_DATA);
-  const [quickShifts, setQuickShifts] = useState<QuickShiftTemplate[]>(DEFAULT_QUICK_SHIFTS);
-  const [selectedBranchId, setSelectedBranchId] = useState(INITIAL_BRANCHES_DATA[0].id);
+  const [branches, setBranches] = useLocalStorage<Branch[]>('ramadan_shifts_branches', INITIAL_BRANCHES_DATA);
+  const [quickShifts, setQuickShifts] = useLocalStorage<QuickShiftTemplate[]>('ramadan_shifts_quick_templates', DEFAULT_QUICK_SHIFTS);
+  const [selectedBranchId, setSelectedBranchId] = useLocalStorage<string>('ramadan_shifts_selected_branch', INITIAL_BRANCHES_DATA[0].id);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isExporting, setIsExporting] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<{ emp: Employee, idx: number } | null>(null);
@@ -881,8 +905,8 @@ export default function App() {
                 key={branch.id}
                 onClick={() => setSelectedBranchId(branch.id)}
                 className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all border shrink-0 ${selectedBranchId === branch.id
-                    ? 'bg-[#333333] text-white border-[#333333] shadow-md'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  ? 'bg-[#333333] text-white border-[#333333] shadow-md'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
               >
                 {branch.name}
