@@ -607,13 +607,19 @@ export default function App() {
       const hiddenElements = element.querySelectorAll('.print\\:hidden');
       hiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
 
+      // Force desktop width for mobile devices so the PDF doesn't look like a squeezed mobile screenshot
+      const targetWidth = 1200;
+
       const dataUrl = await toPng(element, {
         quality: 1,
         backgroundColor: '#ffffff',
-        pixelRatio: 2,
+        pixelRatio: 3, // Increased for ultra-crisp printing
+        width: targetWidth,
         style: {
           direction: 'rtl',
-          fontFamily: '"Noto Sans Arabic", sans-serif'
+          fontFamily: '"Noto Sans Arabic", sans-serif',
+          width: `${targetWidth}px`,
+          minWidth: `${targetWidth}px`
         }
       });
 
