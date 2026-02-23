@@ -603,6 +603,22 @@ export default function App() {
       // Let the UI settle
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      const originalWidth = element.style.width;
+      const originalMaxWidth = element.style.maxWidth;
+      const originalOverflow = element.style.overflow;
+      const innerScroll = element.querySelector('.overflow-x-auto') as HTMLElement;
+      let originalInnerOverflow = '';
+
+      if (innerScroll) {
+        originalInnerOverflow = innerScroll.style.overflow;
+        innerScroll.style.overflow = 'visible';
+      }
+
+      // Force a massive desktop width on the container so no table columns are cut off or hidden by scroll
+      element.style.width = '1200px';
+      element.style.maxWidth = 'none';
+      element.style.overflow = 'visible';
+
       // Temporarily hide elements with .print:hidden for the image capture
       const hiddenElements = element.querySelectorAll('.print\\:hidden');
       hiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
@@ -623,8 +639,15 @@ export default function App() {
         }
       });
 
-      // Restore elements
+      // Restore elements and original mobile styles
       hiddenElements.forEach(el => (el as HTMLElement).style.display = '');
+
+      element.style.width = originalWidth;
+      element.style.maxWidth = originalMaxWidth;
+      element.style.overflow = originalOverflow;
+      if (innerScroll) {
+        innerScroll.style.overflow = originalInnerOverflow;
+      }
 
       const pdf = new jsPDF('landscape', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
