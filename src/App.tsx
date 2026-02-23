@@ -844,16 +844,27 @@ export default function App() {
                       }}
                       className="bg-transparent font-bold text-gray-700 outline-none focus:ring-1 focus:ring-indigo-200 rounded px-1"
                     />
-                    <input
-                      type="color"
-                      value={shift.color}
-                      onChange={(e) => {
-                        const newShifts = [...editingOpeningShifts];
-                        newShifts[idx] = { ...shift, color: e.target.value };
-                        setEditingOpeningShifts(newShifts);
-                      }}
-                      className="w-8 h-8 rounded-full border-none cursor-pointer"
-                    />
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={shift.color}
+                        onChange={(e) => {
+                          const newShifts = [...editingOpeningShifts];
+                          newShifts[idx] = { ...shift, color: e.target.value };
+                          setEditingOpeningShifts(newShifts);
+                        }}
+                        className="w-8 h-8 rounded-full border-none cursor-pointer"
+                      />
+                      <button
+                        onClick={() => {
+                          const newShifts = editingOpeningShifts.filter((_, i) => i !== idx);
+                          setEditingOpeningShifts(newShifts);
+                        }}
+                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <select
@@ -886,7 +897,20 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className="flex gap-3 pt-4">
+
+            <button
+              onClick={() => {
+                setEditingOpeningShifts([
+                  ...editingOpeningShifts,
+                  { name: 'شفت جديد', time: '11:30 am - 5:30 pm', color: '#6366f1' }
+                ]);
+              }}
+              className="w-full py-3 border-2 border-dashed border-gray-200 text-gray-500 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-600 font-bold text-sm transition-all flex items-center justify-center gap-2 mt-2"
+            >
+              <Plus size={16} /> إضافة وقت جديد
+            </button>
+
+            <div className="flex gap-3 pt-4 mt-2 border-t border-gray-100">
               <button
                 onClick={handleSaveOpeningShifts}
                 className="flex-1 bg-[#333333] text-white py-3 rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-2"
