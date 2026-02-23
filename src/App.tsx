@@ -199,6 +199,19 @@ const getCoverageForHour = (branch: Branch, hour: number): number => {
   }, 0);
 };
 
+const formatTimeAR = (timeStr: string): string => {
+  if (!timeStr) return '';
+  return timeStr
+    .toLowerCase()
+    .replace('am', 'ص')
+    .replace('pm', 'م');
+};
+
+const formatShiftDisplay = (start: string, end: string): string => {
+  if (!start || !end) return '';
+  return `من ${formatTimeAR(start)} إلى ${formatTimeAR(end)}`;
+};
+
 // --- Components ---
 
 // --- Components ---
@@ -270,7 +283,7 @@ const EmployeeSchedule = ({ branch, quickShifts, onEdit, onAdd }: { branch: Bran
                         style={{ backgroundColor: getShiftColor(emp.shifts[0], branch, quickShifts) }}
                       >
                         <Clock size={10} className="opacity-50" />
-                        {emp.shifts[0].start} - {emp.shifts[0].end}
+                        <span className="leading-none pt-0.5" dir="rtl">{formatShiftDisplay(emp.shifts[0].start, emp.shifts[0].end)}</span>
                       </div>
                     ) : (
                       <div className="text-gray-300 text-center italic">لا يوجد</div>
@@ -283,7 +296,7 @@ const EmployeeSchedule = ({ branch, quickShifts, onEdit, onAdd }: { branch: Bran
                         style={{ backgroundColor: getShiftColor(emp.shifts[1], branch, quickShifts) }}
                       >
                         <Clock size={10} className="opacity-50" />
-                        {emp.shifts[1].start} - {emp.shifts[1].end}
+                        <span className="leading-none pt-0.5" dir="rtl">{formatShiftDisplay(emp.shifts[1].start, emp.shifts[1].end)}</span>
                       </div>
                     ) : (
                       <div className="text-gray-300 text-center italic">لا يوجد</div>
@@ -949,9 +962,14 @@ export default function App() {
               </div>
               <div className="flex flex-wrap gap-2 justify-end">
                 {selectedBranch.openingShifts.map((shift, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-white px-3 py-1 rounded border border-gray-200 text-[10px] font-bold text-gray-700 shadow-sm">
+                  <div key={idx} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-[10px] sm:text-xs font-bold text-gray-700 shadow-sm" dir="rtl">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: shift.color }}></div>
-                    <span>{shift.name}: {shift.time}</span>
+                    <span className="text-indigo-600">{shift.name}:</span>
+                    <span>
+                      {shift.time.includes(' - ')
+                        ? formatShiftDisplay(shift.time.split(' - ')[0], shift.time.split(' - ')[1])
+                        : shift.time}
+                    </span>
                   </div>
                 ))}
               </div>
